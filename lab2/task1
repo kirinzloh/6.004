@@ -1,0 +1,68 @@
+//Jason Yonglin Wu
+//6.004 :lab 2
+
+.include "/mit/6.004/jsim/nominal.jsim"
+.include "/mit/6.004/jsim/8clocks.jsim"
+.include "/mit/6.004/jsim/lab2checkoff.jsim"
+
+// 2 input NAND gate, input a,b; output z
+.subckt nand2 a b z
+MPD1 z a 1 0 NENH sw=8 sl=1
+MPD2 1 b 0 0 NENH sw=8 sl=1
+MPU1 z a vdd vdd PENH sw=8 sl=1
+MPU2 z b vdd vdd PENH sw=8 sl=1
+.ends
+
+// 2 input NOR gate, input a,b; output z
+.subckt nor2 a b z
+MPD1 z a 0 0 NENH sw=8 sl=1
+MPD2 z b 0 0 NENH sw=8 sl=1
+MPU1 z a 1 vdd PENH   sw=8 sl=1
+MPU2 1 b vdd vdd PENH sw=8 sl=1
+.ends
+
+// 3 input NAND gate, input a b c, output z
+.subckt nand3 a b c z
+MPD1 z a 1 0 NENH sw=8 sl=1
+MPD2 1 b 2 0 NENH sw=8 sl=1
+MPD3 2 c 0 0 NENH sw=8 sl=1
+MPU1 z a vdd vdd PENH sw=8 sl=1
+MPU2 z b vdd vdd PENH sw=8 sl=1
+MPU3 z c vdd vdd PENH sw=8 sl=1
+.ends
+
+// 2 input XOR gate, input a,b; output z
+.subckt xor2 a b z
+Xg0 a b 1 nor2
+MPU1 2 a vdd vdd PENH sw=4 sl=1
+MPU2 z 1 2 vdd PENH sw=4 sl=1
+MPU3 2 b vdd vdd PENH sw=4 sl=1
+MPD1 z a 3 0 NENH sw=2 sl=1
+MPD2 3 b 0 0 NENH sw=2 sl=1
+MPD3 z 1 0 0 NENH sw=2 sl=1
+.ends
+
+// 3 input Adder, input a,b ci(previous state), output s(this digit), co(next state)
+.subckt FA a b ci s co
+XXOR1 a b 1 xor2
+XXOR2 1 ci s xor2
+
+XNAND1 a b 3 nand2
+XNAND2 a ci 4 nand2
+XNAND3 b ci 5 nand2
+XNAND4 3 4 5 co nand3
+.ends
+
+
+.subckt ADDER4 a3 a2 a1 a0 b3 b2 b1 b0 s4 s3 s2 s1 s0
+* remember the node named "0" is the ground node
+* nodes c0 through c3 are internal to the ADDER module
+Xbit0 a0 b0 0 s0 c0 FA
+Xbit1 a1 b1 c0 s1 c1 FA
+Xbit2 a2 b2 c1 s2 c2 FA
+Xbit3 a3 b3 c2 s3 s4 FA
+.ends
+
+.plot Xtest.c0
+
+

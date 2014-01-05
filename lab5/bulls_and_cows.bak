@@ -1,0 +1,108 @@
+| include instruction macros and test jig
+.include /mit/6.004/bsim/beta.uasm
+.include /mit/6.004/bsim/lab5checkoff.uasm
+
+count_bull_cows:	| your subroutine must have this name
+	PUSH(LP)	| standard subroutine entry sequence
+	PUSH(BP)
+	MOVE(SP, BP)
+	
+	PUSH(R1)  | bulls
+	PUSH(R2)  | cows
+ 	PUSH(R3)  | i
+	PUSH(R4)  | j
+	PUSH(R5)  | btemp
+	PUSH(R6)  | atry
+	PUSH(R7)  | btry
+	PUSH(R8)  | mask
+	PUSH(R9)  | a
+	PUSH(R10) | b
+	PUSH(R11) | temp1
+
+	LD(BP,-12,R9)   |load a
+	LD(BP,-16,R10)	|load b
+	CMOVE(0,R1)     |init bulls
+	CMOVE(0,R2)     |init cows
+	CMOVE(0xF,R8)   |init mask
+
+bullinit:
+	CMOVE(0,R3)     |init i
+	BR(endbullloop)
+
+bullloop:
+	ADDC(R3,1,R3)   |i++
+	AND(R9,R8,R6)   |a&mask
+	AND(R10,R8,R7)  |b&mask
+	CMPEQ(R6,R7,R5) |(a&mask) == (b&mask)?
+	BEQ(R5,shiftm)  
+	ADDC(R1,1,R1)   |bull = bull +1
+	OR(R9,R8,R9)    |a = a | mask
+	OR(R10,R8,R10)  |b = b | mask
+
+shiftm:
+	SHLC(R8, 4, R8) |mask = mask << 4
+	
+endbullloop:
+	CMPLTC(R3,4,R11)
+	BNE(R11,bullloop)		
+.breakpoint
+cowloopinit:
+	CMOVE(0,R3)     |init i
+	BR(endcowloop)	
+cowloop:
+	ADDC(R3,1,R3)   |i++
+	ANDC(R9,0xF,R6)   | atry = a& OxF
+	SHRC(R9,4,R9)   |a = a >> 4
+	CMPEQC(R6,0xF,R0) | atry == 0xF ?
+	BNE(R0,endcowloop) |skip to the end if R0 ==1
+	MOVE(R10,R5)        |btemp = b
+	CMOVE(0xF,R8)       |mask = 0xF
+cowlooptwoinit: 
+	CMOVE(0,R4)     |init j
+	BR(endcowlooptwo) 
+cowlooptwo:
+	ADDC(R4,1,R4)   | j++
+	ANDC(R5,0xF,R7) | btry = btemp & 0xF
+	SHRC(R5,4,R5)   | btemp = btemp >>4
+	CMPEQ(R6,R7,R0) | btry == atry
+	
+	BEQ(R0, shiftmt) | skip to the end if R0 == 0
+ 	ADDC(R2,1,R2)   | cow = cow +1
+	OR(R10,R8,R10)  |b = b | mask
+	BR(endcowloop)
+
+shiftmt:
+	SHLC(R8, 4, R8) |mask = mask << 4
+
+endcowlooptwo:
+	CMPLTC(R4,4,R11)
+	BNE(R11,cowlooptwo)
+endcowloop:
+	CMPLTC(R3,4,R11)
+	BNE(R11,cowloop)	
+
+return:
+	SHLC(R1, 4 ,R0)
+	ADD(R0,R2,R0)	
+	
+	POP(R11)
+	POP(R10)
+	POP(R9)
+	POP(R8)
+	POP(R7)
+	POP(R6)
+	POP(R5)
+	POP(R4)
+	POP(R3)
+	POP(R2)
+	POP(R1)
+
+	MOVE(BP,SP)
+	| standard subroutine exit sequence
+	POP(BP)
+	POP(LP)
+	RTN()
+StackBase: LONG(.+4)
+	. = .+0x1000
+	| Pointer to bottom of stack
+	| Reserve space for stack...

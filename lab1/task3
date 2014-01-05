@@ -1,0 +1,24 @@
+.include "/mit/6.004/jsim/nominal.jsim"
+.include "/mit/6.004/jsim/lab1checkoff.jsim"
+
+* 3 input NAND gate
+.subckt nand3 a b c z
+MPD1 z a 1 0 NENH sw=8 sl=1
+MPD2 1 b 0 0 NENH sw=8 sl=1
+MPD3 z c 0 0 NENH sw=8 sl=1
+MPU1 2 a vdd vdd PENH sw=10 sl=1
+MPU2 2 b vdd vdd PENH sw=10 sl=1
+MPU3 z c 2 2 PENH sw=10 sl=1
+.ends
+
+
+* INVERTER: input is A, output is Z
+.subckt inv a z
+MPD1 z a 0 0 NENH sw=16 sl=1
+MPU1 z a vdd vdd PENH sw=16 sl=1
+.ends
+
+.subckt F A B C Z
+Xg0 A B C 3 nand3
+Xg1 3 Z inv
+.ends

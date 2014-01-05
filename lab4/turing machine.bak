@@ -1,0 +1,60 @@
+// Parenthesis matcher Turing Machine
+// test tapes and checkoff information 
+checkoff "6004.mit.edu/currentsemester/6004assignment.doit" "Lab #4" 1103641864 // this should be at the end of the line above
+
+symbols ( ) 0 1
+
+tape test1 (
+result1 test1 0
+
+tape test2 )
+result1 test2 0
+
+tape test3 ( )
+result1 test3 1
+
+tape test4 ) (
+result1 test4 0
+
+tape test5 ( ) ( ) ( ( ( ) ) ( ) ) ) ( )
+result1 test5 0
+
+tape test6 ( ) ( ( ( ) ( ( ( ) ) ( ) ) )
+result1 test6 0
+
+tape test7 ( ) ( ( ) ( ( ( ) ) ( ) ) )
+result1 test7 1
+
+
+states s1 s2
+symbols lf rr rl lu_l lc lu_r
+
+//lf: first left
+//rr: right paren going right on next turn
+//rl: right peren going left on next turn
+//lu_l unmatched left paren going left on next turn
+//lc matched left paren
+//lu_r unmatched left paren going right on next turn
+
+// parenthesis are matched
+action s1 ( s2 lf L
+//action s1 ) s2 1 R
+action s1 ) *halt* 0 -
+action s1 rr s1 rl L
+action s1 rl s1 rl R
+action s1 lu_r s2 lf L
+action s1 - *halt* 1 -
+
+// parenthesis are not matched
+action s2 ( s2 lu_l L
+action s2 ) s2 rr R
+action s2 lf s1 lc L
+action s2 rr s2 rl L
+action s2 rl s2 rr R
+action s2 lu_l s2 lu_r R
+action s2 lc *halt* 0 -
+action s2 lu_r s2 lu_l L
+action s2 - *halt* 0 -
+
+
+

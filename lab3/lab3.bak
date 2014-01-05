@@ -1,0 +1,166 @@
+.include "/mit/6.004/jsim/nominal.jsim"
+.include "/mit/6.004/jsim/stdcell.jsim"
+.include "/mit/6.004/jsim/lab3_test_mult.jsim"
+
+
+.subckt BOOL alufn[3:0] A[31:0] B[31:0] OUT[31:0]
+Xbool A[31:0] B[31:0] alufn[0]#32 alufn[1]#32 alufn[2]#32 alufn[3]#32 OUT[31:0] mux4
+.ends
+
+// 3 input Adder, input a,b ci(previous state), output s(this digit), co(next state)
+.subckt FA a b ci s co
+XXOR1 a b 1 xor2
+XXOR2 1 ci s xor2
+
+XNAND1 a b 3 nand2
+XNAND2 a ci 4 nand2
+XNAND3 b ci 5 nand2
+XNAND4 3 4 5 co nand3
+.ends
+
+// 32 bit NOR
+.subckt NOR32 a[0:31] z 
+XNOR a[0:15] a[16:31] b[1:16] nor2
+XANDF b[1:4] b[5:8] b[9:12] b[13:16] c[1:4] and4
+XAMDS c1 c2 c3 c4 z and4
+.ends
+
+.subckt knex a b
+.connect a b 
+.ends 
+
+.subckt ARITH alufn[1:0] A[31:0] B[31:0] OUT[31:0] Z V N
+XXORB B[31:0] alufn[0]#32 XB[31:0] xor2
+XF0 A0 XB0 alufn[0] S0 Co0 FA
+XFA A[31:1] XB[31:1] Co[30:0] S[31:1] Co[31:1] FA
+XMUL A[31:0] B[31:0] M[31:0] mul32
+XMUX alufn1#32 S[31:0] M[31:0] OUT[31:0] mux2
+
+XS31INV S31 S31INV inverter
+XA31INV A31 A31INV inverter
+XB31INV XB31 XB31INV inverter
+XANDT A31 XB31 S31INV TOP and3
+XANDB A31INV XB31INV S31 BOT and3
+XOR1  TOP BOT V or2
+
+.connect S31 N 
+
+XNOR31 S[31:0] Z NOR32
+.ends
+
+.subckt LSHIFT A[31:0] B[4:0] SL[31:0]
+XCONS c constant0
+XLMUX4A B4#32 A[31:0] A[15:0] c#16 W[31:0] mux2
+XLMUX3A B3#32 W[31:0] W[23:0] c#8 X[31:0] mux2
+XLMUX2A B2#32 X[31:0] X[27:0] c#4 Y[31:0] mux2
+XLMUX1A B1#32 Y[31:0] Y[29:0]  c#2 Z[31:0] mux2
+XLMUX0A B0#32 Z[31:0] Z[30:0] c   SL[31:0] mux2
+.ends
+
+.subckt RSHIFT A[31:0] B[4:0] SL[31:0]
+XRIGHT A[0:31] B[4:0] SL[0:31] LSHIFT
+.ends
+
+.subckt RSHIFTSIG A[31:0] B[4:0] Sl[31:0]
+XLMUX4B B4#32 A[31:0] A31#16 A[31:16] W[31:0] mux2
+XLMUX3B B3#32 W[31:0] A31#8  W[31:8] X[31:0] mux2
+XLMUX2B B2#32 X[31:0] A31#4  X[31:4] Y[31:0] mux2
+XLMUX1B B1#32 Y[31:0] A31#2  Y[31:2] Z[31:0] mux2
+XLMUX0B B0#32 Z[31:0] A31   Z[31:1] SL[31:0] mux2
+.ends
+
+.subckt SHIFT alufn[1:0] A[31:0] B[31:0] OUT[31:0]
+XCONS c constant0
+XLSHIFT A[31:0] B[4:0] LEFT[31:0] LSHIFT
+XRSHIFT A[31:0] B[4:0] RIGHT[31:0] RSHIFT
+XRSHIFTS A[31:0] B[4:0] RIGHTS[31:0] RSHIFTSIG
+XMUX alufn1#32 alufn0#32 LEFT[31:0] c#32 RIGHT[31:0] RIGHTS[31:0] OUT[31:0] mux4
+.ends
+
+.subckt CMP alufn3 alufn1 Z V N OUT[31:0]
+XOUT OUT[31:1] constant0
+XMUX alufn3 alufn1 eq lesseq less gnd OUT0 mux4
+XGND gnd constant0
+.connect Z eq
+XlESS N V less xor2
+XlESSEQ less Z lesseq or2
+.ends
+
+.subckt mul32 A[31:0] B[31:0] out[31:0]
+
+XAND0 A[31:0] B0#32 P0_[31:1] out0 and2
+XAND1 A[30:0] B1#31 P1_[31:1] and2
+XFA1  P1_[31:1] P0_[31:1] co1_[30:1] 0 s1_[31:2] out1 co1_[31:1] FA
+XAND2 A[29:0] B2#30 P2_[31:2] and2
+XFA2  P2_[31:2] s1_[31:2] co2_[30:2] 0 s2_[31:3] out2 co2_[31:2] FA
+XAND3 A[28:0] B3#29 P3_[31:3] and2
+XFA3 P3_[31:3] s2_[31:3] co3_[30:3] 0 s3_[31:4] out3 co3_[31:3] FA
+XAND4 A[27:0] B4#28 P4_[31:4] and2
+XFA4 P4_[31:4] s3_[31:4] co4_[30:4] 0  s4_[31:5] out4 co4_[31:4] FA 
+XAND5 A[26:0] B5#27 P5_[31:5] and2
+XFA5 P5_[31:5] s4_[31:5] co5_[30:5] 0 s5_[31:6] out5 co5_[31:5] FA
+XAND6 A[25:0] B6#26 P6_[31:6] and2
+XFA6 P6_[31:6] s5_[31:6]  co6_[30:6] 0 s6_[31:7] out6 co6_[31:6] FA
+XAND7 A[24:0] B7#25 P7_[31:7] and2
+XFA7 P7_[31:7] s6_[31:7] co7_[30:7] 0 s7_[31:8] out7 co7_[31:7] FA
+XAND8 A[23:0] B8#24 P8_[31:8] and2
+XFA8 P8_[31:8] s7_[31:8] co8_[30:8] 0 s8_[31:9] out8 co8_[31:8] FA
+XAND9 A[22:0] B9#23 P9_[31:9] and2
+XFA9 P9_[31:9] s8_[31:9] co9_[30:9] 0 s9_[31:10] out9 co9_[31:9] FA
+XAND10 A[21:0] B10#22 P10_[31:10] and2
+XFA10 P10_[31:10] s9_[31:10] co10_[30:10] 0 s10_[31:11] out10 co10_[31:10] FA
+XAND11 A[20:0] B11#21 P11_[31:11] and2
+XFA11 P11_[31:11] s10_[31:11] co11_[30:11] 0 s11_[31:12] out11 co11_[31:11] FA
+XAND12 A[19:0] B12#20 P12_[31:12] and2
+XFA12 P12_[31:12] s11_[31:12] co12_[30:12] 0 s12_[31:13] out12 co12_[31:12] FA
+XAND13 A[18:0] B13#19 P13_[31:13] and2
+XFA13 P13_[31:13] s12_[31:13] co13_[30:13] 0 s13_[31:14] out13 co13_[31:13] FA
+XAND14 A[17:0] B14#18 P14_[31:14] and2
+XFA14 P14_[31:14] s13_[31:14] co14_[30:14] 0 s14_[31:15] out14 co14_[31:14] FA
+XAND15 A[16:0] B15#17 P15_[31:15] and2
+XFA15 P15_[31:15] s14_[31:15] co15_[30:15] 0 s15_[31:16] out15 co15_[31:15] FA
+XAND16 A[15:0] B16#16 P16_[31:16] and2
+XFA16 P16_[31:16] s15_[31:16] co16_[30:16] 0 s16_[31:17] out16 co16_[31:16] FA
+XAND17 A[14:0] B17#15 P17_[31:17] and2
+XFA17 P17_[31:17] s16_[31:17]  co17_[30:17] 0 s17_[31:18] out17 co17_[31:17] FA
+XAND18 A[13:0] B18#14 P18_[31:18] and2
+XFA18 P18_[31:18] s17_[31:18] co18_[30:18] 0 s18_[31:19] out18 co18_[31:18] FA
+XAND19 A[12:0] B19#13 P19_[31:19] and2
+XFA19 P19_[31:19] s18_[31:19] co19_[30:19] 0 s19_[31:20] out19 co19_[31:19] FA
+XAND20 A[11:0] B20#12 P20_[31:20] and2
+XFA20 P20_[31:20] s19_[31:20] co20_[30:20] 0 s20_[31:21] out20 co20_[31:20] FA
+XAND21 A[10:0] B21#11 P21_[31:21] and2
+XFA21 P21_[31:21] s20_[31:21] co21_[30:21] 0 s21_[31:22] out21 co21_[31:21] FA
+XAND22 A[9:0] B22#10 P22_[31:22] and2
+XFA22 P22_[31:22] s21_[31:22] co22_[30:22] 0 s22_[31:23] out22 co22_[31:22] FA
+XAND23 A[8:0] B23#9 P23_[31:23] and2
+XFA23 P23_[31:23] s22_[31:23] co23_[30:23] 0 s23_[31:24] out23 co23_[31:23] FA
+XAND24 A[7:0] B24#8 P24_[31:24] and2
+XFA24 P24_[31:24] s23_[31:24] co24_[30:24] 0 s24_[31:25] out24 co24_[31:24] FA
+XAND25 A[6:0] B25#7 P25_[31:25] and2
+XFA25 P25_[31:25] s24_[31:25]  co25_[30:25] 0 s25_[31:26] out25 co25_[31:25] FA
+XAND26 A[5:0] B26#6 P26_[31:26] and2
+XFA26 P26_[31:26] s25_[31:26] co26_[30:26] 0 s26_[31:27] out26 co26_[31:26] FA
+XAND27 A[4:0] B27#5 P27_[31:27] and2
+XFA27 P27_[31:27] s26_[31:27] co27_[30:27] 0 s27_[31:28] out27 co27_[31:27] FA
+XAND28 A[3:0] B28#4 P28_[31:28] and2
+XFA28 P28_[31:28] s27_[31:28] co28_[30:28] 0 s28_[31:29] out28 co28_[31:28] FA
+XAND29 A[2:0] B29#3 P29_[31:29] and2
+XFA29 P29_[31:29] s28_[31:29] co29_[30:29] 0 s29_[31:30] out29 co29_[31:29] FA
+XAND30 A[1:0] B30#2 P30_[31:30] and2
+XFA30 P30_[31:30] s29_[31:30] co30_30 0 s30_31 out30 co30_[31:30] FA
+XAND31 A0 B31 P31_31 and2
+XFA31 P31_31 s30_31 0 out31 co31_31 FA
+.ends
+
+.subckt alu alufn[4:0] a[31:0] b[31:0] out[31:0] z v n
+*** Generate outputs from each of BOOL, SHIFT, ARITH, CMP subcircuits:
+xbool alufn[3:0] a[31:0] b[31:0] boolout[31:0] BOOL
+xshift alufn[1:0] a[31:0] b[31:0] shiftout[31:0] SHIFT
+xarith alufn[1:0] a[31:0] b[31:0] arithout[31:0] z v n ARITH
+xcmp alufn[3] alufn[1] z v n cmpout[31:0] CMP
+*** Combine them,using three multiplexors:
+xmux1 alufn[4]#32 nonbool[31:0] boolout[31:0] out[31:0] mux2
+xmux2 alufn[2]#32 arithshift[31:0] cmpout[31:0] nonbool[31:0] mux2
+xmux3 alufn[3]#32 arithout[31:0] shiftout[31:0] arithshift[31:0] mux2
+.ends
